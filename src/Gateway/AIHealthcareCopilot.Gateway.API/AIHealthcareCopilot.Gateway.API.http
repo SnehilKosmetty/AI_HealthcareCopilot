@@ -1,0 +1,6 @@
+@AIHealthcareCopilot.Gateway.API_HostAddress = http://localhost:5163
+
+GET {{AIHealthcareCopilot.Gateway.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
