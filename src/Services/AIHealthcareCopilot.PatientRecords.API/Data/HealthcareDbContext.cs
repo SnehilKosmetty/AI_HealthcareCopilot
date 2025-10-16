@@ -48,6 +48,11 @@ public class HealthcareDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
             
+            // Ignore authentication fields (handled by Authentication API)
+            entity.Ignore(e => e.PasswordHash);
+            entity.Ignore(e => e.RefreshToken);
+            entity.Ignore(e => e.RefreshTokenExpiry);
+            
             // Indexes
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.LicenseNumber).IsUnique();

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AIHealthcareCopilot.PatientRecords.API.Data;
 using AIHealthcareCopilot.Shared.Models;
+using AIHealthcareCopilot.PatientRecords.API.DTOs;
 
 namespace AIHealthcareCopilot.PatientRecords.API.Controllers;
 
@@ -18,51 +19,108 @@ public class DoctorsController : ControllerBase
 
     // GET: api/doctors
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Doctor>>> GetDoctors()
+    public async Task<ActionResult<IEnumerable<DoctorResponseDto>>> GetDoctors()
     {
-        return await _context.Doctors.ToListAsync();
+        var doctors = await _context.Doctors
+            .Select(d => new DoctorResponseDto
+            {
+                Id = d.Id,
+                FirstName = d.FirstName,
+                LastName = d.LastName,
+                Email = d.Email,
+                Specialization = d.Specialization,
+                LicenseNumber = d.LicenseNumber,
+                Hospital = d.Hospital,
+                CreatedAt = d.CreatedAt,
+                UpdatedAt = d.UpdatedAt
+            })
+            .ToListAsync();
+        
+        return Ok(doctors);
     }
 
     // GET: api/doctors/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Doctor>> GetDoctor(int id)
+    public async Task<ActionResult<DoctorResponseDto>> GetDoctor(int id)
     {
         var doctor = await _context.Doctors
-            .Include(d => d.MedicalRecords)
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .Where(d => d.Id == id)
+            .Select(d => new DoctorResponseDto
+            {
+                Id = d.Id,
+                FirstName = d.FirstName,
+                LastName = d.LastName,
+                Email = d.Email,
+                Specialization = d.Specialization,
+                LicenseNumber = d.LicenseNumber,
+                Hospital = d.Hospital,
+                CreatedAt = d.CreatedAt,
+                UpdatedAt = d.UpdatedAt
+            })
+            .FirstOrDefaultAsync();
 
         if (doctor == null)
         {
             return NotFound();
         }
 
-        return doctor;
+        return Ok(doctor);
     }
 
     // POST: api/doctors
     [HttpPost]
-    public async Task<ActionResult<Doctor>> PostDoctor(Doctor doctor)
+    public async Task<ActionResult<DoctorResponseDto>> PostDoctor(DoctorDto doctorDto)
     {
-        doctor.CreatedAt = DateTime.UtcNow;
-        doctor.UpdatedAt = DateTime.UtcNow;
+        // Create a new doctor without authentication fields
+        var newDoctor = new Doctor
+        {
+            FirstName = doctorDto.FirstName,
+            LastName = doctorDto.LastName,
+            Email = doctorDto.Email,
+            Specialization = doctorDto.Specialization,
+            LicenseNumber = doctorDto.LicenseNumber,
+            Hospital = doctorDto.Hospital,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
         
-        _context.Doctors.Add(doctor);
+        _context.Doctors.Add(newDoctor);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetDoctor", new { id = doctor.Id }, doctor);
+        var result = new DoctorResponseDto
+        {
+            Id = newDoctor.Id,
+            FirstName = newDoctor.FirstName,
+            LastName = newDoctor.LastName,
+            Email = newDoctor.Email,
+            Specialization = newDoctor.Specialization,
+            LicenseNumber = newDoctor.LicenseNumber,
+            Hospital = newDoctor.Hospital,
+            CreatedAt = newDoctor.CreatedAt,
+            UpdatedAt = newDoctor.UpdatedAt
+        };
+
+        return CreatedAtAction("GetDoctor", new { id = newDoctor.Id }, result);
     }
 
     // PUT: api/doctors/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutDoctor(int id, Doctor doctor)
+    public async Task<IActionResult> PutDoctor(int id, DoctorDto doctorDto)
     {
-        if (id != doctor.Id)
+        var existingDoctor = await _context.Doctors.FindAsync(id);
+        if (existingDoctor == null)
         {
-            return BadRequest();
+            return NotFound();
         }
 
-        doctor.UpdatedAt = DateTime.UtcNow;
-        _context.Entry(doctor).State = EntityState.Modified;
+        // Update only non-authentication fields
+        existingDoctor.FirstName = doctorDto.FirstName;
+        existingDoctor.LastName = doctorDto.LastName;
+        existingDoctor.Email = doctorDto.Email;
+        existingDoctor.Specialization = doctorDto.Specialization;
+        existingDoctor.LicenseNumber = doctorDto.LicenseNumber;
+        existingDoctor.Hospital = doctorDto.Hospital;
+        existingDoctor.UpdatedAt = DateTime.UtcNow;
 
         try
         {
